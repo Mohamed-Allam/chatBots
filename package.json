@@ -1,0 +1,23 @@
+{
+  "name": "chatbots",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mohamed-Allam/chatBots.git"
+  },
+  "author": "Mohamed Allam",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Mohamed-Allam/chatBots/issues"
+  },
+  "homepage": "https://github.com/Mohamed-Allam/chatBots#readme",
+  "dependencies": {
+    "botbuilder": "^3.14.1",
+    "restify": "^7.1.1"
+  }
+}
