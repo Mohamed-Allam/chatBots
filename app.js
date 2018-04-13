@@ -13,8 +13,9 @@ var connector = new builder.ChatConnector({
     appPassword: process.env.MicrosoftAppPassword
 });
 
-// Listen for messages from users 
+// registering a middleware to access all requests before route matching
 server.pre((req,res,next)=>{console.log(" >>>> This is a new Request ... \n"), next();})
+// Listen for messages from users 
 server.post('/api/messages', connector.listen());
 
 
@@ -36,10 +37,13 @@ var menuItems = {
 
 var inMemoryStorage = new builder.MemoryBotStorage();
 
+
+
 // This is a reservation bot that has a menu of offerings.
 var bot = new builder.UniversalBot(connector, [
     function(session){
         session.send("Welcome to Contoso Hotel and Resort.");
+        
         session.beginDialog("mainMenu");
     }
 ]).set('storage', inMemoryStorage); // Register in-memory storage 
@@ -89,8 +93,14 @@ bot.dialog('dinnerReservation', [
 ])
 .triggerAction({
     matches: /^dinner reserv$/i,
-    confirmPrompt: "This will cancel your current Dinner Reservation Request. Are you sure?"
-});
+    confirmPrompt: "This will cancel your current request and start a Dinner Reservation Request. Are you sure?"
+}).beginDialogAction('dinnerReservHelpAction', 'dinnerReservHelp', { matches: /^help$/i });
+
+// Context Help dialog for Dinner Reserve dialog
+bot.dialog('dinnerReservHelp', function(session, args, next) {
+    var msg = "this is the dinner reserver specific help";
+    session.endDialog(msg);
+})
 
 // Dialog to ask for a date and time
 bot.dialog('askForDateTime', [
@@ -143,6 +153,10 @@ var dinnerMenu = {
     "Check out": {
         Description: "Check out",
         Price: 0 // Order total. Updated as items are added to order.
+    },
+    "Cancel order": { // Cancel the order and back to Main Menu
+        Description: "Cancel order",
+        Price: 0
     }
 };
 
@@ -189,7 +203,23 @@ bot.dialog('orderDinner', [
         matches: /^cancel$/i,
         confirmPrompt: "This will cancel your order. Are you sure?"
     }
-);
+).beginDialogAction('showCartAction', 'showDinnerCart', {
+    matches: /^show cart$/i,
+    dialogArgs: {
+        showTotal: true
+    }
+});
+
+// Show dinner items in cart
+bot.dialog('showDinnerCart', function(session){
+    for(var i = 1; i < session.conversationData.orders.length; i++){
+        session.send(`You ordered: ${session.conversationData.orders[i].Description} for a total of $${session.conversationData.orders[i].Price}.`);
+    }
+
+    // End this dialog
+    session.endDialog(`Your total is: $${session.conversationData.orders[0].Price}`);
+});
+
 
 
 // Add dinner items to the list by repeating this dialog until the user says `check out`. 
@@ -213,6 +243,10 @@ bot.dialog("addDinnerItem", [
         if(results.response){
             if(results.response.entity.match(/^check out$/i)){
                 session.endDialog("Checking out...");
+            } 
+            else if(results.response.entity.match(/^cancel/i)){
+                // Cancel the order and start "mainMenu" dialog.
+                session.cancelDialog(0, "mainMenu");
             }
             else {
                 var order = dinnerMenu[results.response.entity];
@@ -238,9 +272,15 @@ bot.dialog("addDinnerItem", [
 // Global Help
 
 // The dialog stack is cleared and this dialog is invoked when the user enters 'help'.
-bot.dialog('help', function (session, args, next) {
-    session.endDialog(" This is The General Help");
-})
+bot.dialog('help', [function (session, args, next) {
+    session.send(" This is The General Help")
+    builder.Prompts.text(session," Press any Key To Exit")
+    
+   
+},(session,results) => {
+    session.send("You Pressed " + results.response)
+        session.endDialog("Genral Help ENded");
+    }])
 .triggerAction({
     matches: /^help$/i,
 });
